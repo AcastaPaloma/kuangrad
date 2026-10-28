@@ -1,5 +1,6 @@
 // Renders the cards that stack up in the left panel: code listings and the small visuals that sit between them.
 import { escapeHtml, rich, tex } from './format.js';
+import { pass } from './pass.js';
 const NS = 'http://www.w3.org/2000/svg';
 
 // --- Python highlighting -----------------------------------------------------------------------------------------
@@ -108,11 +109,12 @@ function digitsCard(digits) {
 // --- one edge, stored twice --------------------------------------------------------------------------------------
 // Names and derivatives are KaTeX overlays on the drawing, placed in the SVG's coordinates.
 function edgeCard() {
+  const w = pass.edge.w.toFixed(3); // the real w₇,₃ from the pass the graph shows
   const wrap = document.createElement('div');
   wrap.className = 'edge-card';
   const at = (x, y, html, cls = '') => `<span class="ef ${cls}" style="left:${(x / 460) * 100}%;top:${(y / 200) * 100}%">${html}</span>`;
   wrap.innerHTML = `
-    <div class="edge-figure" role="img" aria-label="x seven and w seven-three both feed z three. The derivative of z three with respect to x seven is w seven-three's value, 0.031; with respect to w seven-three it is x seven's value, 1.0.">
+    <div class="edge-figure" role="img" aria-label="x seven and w seven-three both feed unit three of z one. Its derivative with respect to x seven is w seven-three's value, ${w}; with respect to w seven-three it is x seven's value, 1.0.">
       <svg viewBox="0 0 460 200" aria-hidden="true">
         <defs><marker id="edge-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 8 4 0 8z"/></marker></defs>
         <line x1="84" y1="52" x2="330" y2="96" marker-end="url(#edge-arrow)"/>
@@ -123,17 +125,17 @@ function edgeCard() {
       </svg>
       ${at(60, 48, tex('x_7', false, true), 'ef-name')}
       ${at(60, 152, tex('w_{7,3}', false, true), 'ef-name')}
-      ${at(356, 100, tex('z_3', false, true), 'ef-name')}
+      ${at(356, 100, tex('z_{1,3}', false, true), 'ef-name')}
       ${at(60, 88, 'value 1.0', 'ef-value')}
-      ${at(60, 192, 'value 0.031', 'ef-value')}
-      ${at(205, 34, tex('\\displaystyle\\pd{z_3}{x_7} = w_{7,3} = 0.031', false, true), 'ef-grad')}
-      ${at(205, 170, tex('\\displaystyle\\pd{z_3}{w_{7,3}} = x_7 = 1.0', false, true), 'ef-grad')}
+      ${at(60, 192, `value ${w}`, 'ef-value')}
+      ${at(205, 34, tex(`\\displaystyle\\pd{z_{1,3}}{x_7} = w_{7,3} = ${w}`, false, true), 'ef-grad')}
+      ${at(205, 170, tex('\\displaystyle\\pd{z_{1,3}}{w_{7,3}} = x_7 = 1.0', false, true), 'ef-grad')}
     </div>
     <div class="edge-lists">
       <div><h4>x₇.local_grads <span>512 entries</span></h4><ol>
-        <li>[z₀, x₇, w₇,₀]</li><li>[z₁, x₇, w₇,₁]</li><li>[z₂, x₇, w₇,₂]</li><li class="is-hit">[z₃, x₇, 0.031]</li><li class="more">… 508 more</li></ol></div>
-      <div><h4>w₇,₃.local_grads <span>1 entry</span></h4><ol><li class="is-hit">[z₃, w₇,₃, 1.0]</li></ol>
-        <h4>z₃.parents <span>513</span></h4><ol class="inline"><li>x₀</li><li>w₀,₃</li><li>…</li><li class="is-hit">x₇</li><li class="is-hit">w₇,₃</li><li>…</li><li>b₃</li></ol></div>
+        <li>[z₁,₀, x₇, w₇,₀]</li><li>[z₁,₁, x₇, w₇,₁]</li><li>[z₁,₂, x₇, w₇,₂]</li><li class="is-hit">[z₁,₃, x₇, ${w}]</li><li class="more">… 508 more</li></ol></div>
+      <div><h4>w₇,₃.local_grads <span>1 entry</span></h4><ol><li class="is-hit">[z₁,₃, w₇,₃, 1.0]</li></ol>
+        <h4>z₁,₃.parents <span>513</span></h4><ol class="inline"><li>x₀</li><li>w₀,₃</li><li>…</li><li class="is-hit">x₇</li><li class="is-hit">w₇,₃</li><li>…</li><li>b₃</li></ol></div>
     </div>`;
   return wrap;
 }
@@ -193,23 +195,16 @@ export function jacobianCard() {
 function bfsCard() {
   const names = ['z₁', 'a₁', 'z₂', 'a₂', 'l', 'p', 'L'];
   const x = i => 36 + i * 66;
-  const row = (y, depths, late) => names.map((name, i) => `
-      <g class="bfs-node${late === i ? ' is-late' : ''}"><circle cx="${x(i)}" cy="${y}" r="15"/><text x="${x(i)}" y="${y + 5}">${name}</text>
-      <text class="bfs-depth" x="${x(i)}" y="${y + 34}">${depths[i]}</text></g>`).join('') +
-    names.slice(0, -1).map((_, i) => `<line x1="${x(i) + 15}" y1="${y}" x2="${x(i + 1) - 17}" y2="${y}" marker-end="url(#bfs-arrow)"/>`).join('');
   const wrap = document.createElement('div');
   wrap.className = 'bfs-card';
   wrap.innerHTML = `
-    <svg viewBox="0 0 460 250" aria-label="Top: a layered chain z1, a1, z2, a2, l, p, L with BFS depths 6 down to 0; each Neuron's depth equals every path's length. Bottom: the same chain with a skip connection from a1 to l. BFS reaches a1 at depth 3 through the skip, before z2 at depth 4 has passed back its gradient.">
-      <defs><marker id="bfs-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z"/></marker>
-      <marker id="bfs-arrow-hot" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z"/></marker></defs>
+    <svg viewBox="0 0 460 100" aria-label="A layered chain z1, a1, z2, a2, l, p, L with BFS depths 6 down to 0; each Neuron's depth equals every path's length.">
+      <defs><marker id="bfs-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z"/></marker></defs>
       <text class="bfs-title" x="4" y="16">as built: BFS level = path length</text>
-      ${row(48, [6, 5, 4, 3, 2, 1, 0])}
-      <text class="bfs-title" x="4" y="128">with a skip a₁ → l</text>
-      <path class="bfs-skip" d="M${x(1)} ${172} C ${x(1) + 30} 120, ${x(4) - 30} 120, ${x(4) - 4} ${158}" marker-end="url(#bfs-arrow-hot)"/>
-      ${row(174, [6, 3, 4, 3, 2, 1, 0], 1)}
-      <path class="bfs-late" d="M${x(2) - 11} ${185} C ${x(2) - 22} 236, ${x(1) + 22} 236, ${x(1) + 12} ${188}" marker-end="url(#bfs-arrow-hot)"/>
-      <text class="bfs-late-label" x="${x(1) + 33}" y="244">z₂ reports after a₁ was popped</text>
+      ${names.map((name, i) => `
+      <g class="bfs-node"><circle cx="${x(i)}" cy="48" r="15"/><text x="${x(i)}" y="53">${name}</text>
+      <text class="bfs-depth" x="${x(i)}" y="82">${6 - i}</text></g>`).join('')}
+      ${names.slice(0, -1).map((_, i) => `<line x1="${x(i) + 15}" y1="48" x2="${x(i + 1) - 17}" y2="48" marker-end="url(#bfs-arrow)"/>`).join('')}
     </svg>`;
   return wrap;
 }

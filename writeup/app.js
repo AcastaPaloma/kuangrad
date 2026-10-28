@@ -1,4 +1,4 @@
-import { steps, details, digits } from './content.js';
+import { steps, details, notation, digits } from './content.js';
 import { snippets } from './snippets.js';
 import { buildGraph } from './graph.js';
 import { renderCard, jacobianCard } from './cards.js';
@@ -23,6 +23,7 @@ const blockHtml = block => {
   if (block.list) return `<ul>${block.list.map(item => `<li>${rich(item)}</li>`).join('')}</ul>`;
   if (block.math) return `<div class="math">${tex(block.math, true)}</div>`;
   if (block.note) return `<p class="note">${rich(block.note)}</p>`;
+  if (block.preface) return `<div class="preface"><p>${escapeHtml(block.preface.lead)}</p><ul>${block.preface.list.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p>${escapeHtml(block.preface.close)}</p></div>`;
   if (block.stages) return stagesHtml(block.stages);
   if (block.details) return `<p><button class="details-btn" type="button" data-details="${block.details}" aria-haspopup="dialog">${rich(block.label)}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></p>`;
   return '';
@@ -46,6 +47,27 @@ const end = document.createElement('footer');
 end.className = 'article-end';
 end.innerHTML = 'The code shown on the left is copied from the repository by <code>scripts/build-snippets.mjs</code>, line numbers included. <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">Read it on GitHub</a>.';
 article.append(end);
+
+// --- notation key --------------------------------------------------------------------------------------------------
+// Floats in the corner of the article. Full definitions, or one word each; the choice is remembered per browser.
+const key = document.createElement('aside');
+key.className = 'notation';
+key.setAttribute('aria-label', 'Notation');
+key.innerHTML = `<header><span>Notation</span><button type="button" class="notation-toggle"></button></header>
+  <dl>${notation.map(([symbol, word, full]) => `<div><dt>${tex(symbol)}</dt><dd><span class="word">${escapeHtml(word)}</span><span class="full">${rich(full)}</span></dd></div>`).join('')}</dl>`;
+document.querySelector('.notes').append(key);
+const keyToggle = key.querySelector('.notation-toggle');
+const storedKey = () => { try { return localStorage.getItem('kuangrad-notation'); } catch { return null; } };
+const setKey = (compact, remember = true) => {
+  key.classList.toggle('is-compact', compact);
+  keyToggle.textContent = compact ? 'define' : 'one word';
+  keyToggle.setAttribute('aria-label', compact ? 'Show full definitions' : 'Shrink to one word each');
+  if (remember) try { localStorage.setItem('kuangrad-notation', compact ? 'compact' : 'full'); } catch {}
+};
+// Until the reader picks, it is in full on the opening passage and one word each after it.
+let keyChosen = storedKey() !== null;
+setKey(keyChosen ? storedKey() === 'compact' : matchMedia('(max-width: 760px)').matches, false);
+keyToggle.addEventListener('click', () => { keyChosen = true; setKey(!key.classList.contains('is-compact')); });
 
 // --- details dialog ----------------------------------------------------------------------------------------------
 const dialog = document.createElement('dialog');
@@ -141,6 +163,7 @@ function show(index) {
   cards[index].querySelector('.card-body').scrollTop = 0;
   cards[index].refreshMore();
   graph.setState(step.graph);
+  if (!keyChosen && !matchMedia('(max-width: 760px)').matches) setKey(index > 0, false);
   blocks.forEach((block, i) => block.classList.toggle('is-current', i === index));
   tocLinks.forEach((link, i) => i === index ? link.setAttribute('aria-current', 'location') : link.removeAttribute('aria-current'));
   counter.textContent = `${String(index + 1).padStart(2, '0')} / ${steps.length}`;

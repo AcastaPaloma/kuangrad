@@ -3,31 +3,33 @@
 // rows of each layer are drawn. Labels are HTML overlays typeset with KaTeX and sized in container units, so they scale
 // with the SVG; the yellow boxes are overlays in the same coordinate space, so they glide between regions with CSS.
 // In the forward and backward modes the graph plays one pass, stage by stage, and reports each stage to onStage.
+// Every number comes from pass.js: one real kuangrad step on a drawn 2 (scripts/build_pass.py).
 import { tex, rich } from './format.js';
+import { pass } from './pass.js';
 
 const W = 720, H = 346, NS = 'http://www.w3.org/2000/svg';
 const R = 14, PITCH = 34, GAP = 18, CY = 184, CELL = 11, THIN = 5, FAN_IN = 24, FAN_OUT = 26, BRACKET = 4;
-const STAGE = 2000, HOLD = 2800;
+const STAGE = { forward: 2600, backward: 4400 }, HOLD = 3000;
 
-// Values are illustrative but shaped like a real pass on a drawn 2: x₇ and x₈ are inked pixels, about half of the
-// hidden units are dead, p puts 70% on the label, and the gradient through a dead unit is 0.
 const COLUMNS = [
-  { id: 'x', letter: 'x', name: 'x', size: '256', slots: [0, 1, null, 7, 8, null, 255], depth: 7, scale: 1,
-    values: [0, 0, 1, 1, 0], grads: [0.01, -0.02, 0.03, -0.01, 0.02] },
-  { id: 'z1', letter: 'z', name: 'z_1', size: '512', slots: [0, 1, 2, 3, null, 511], depth: 6, scale: 0.8,
-    values: [0.42, -0.31, 0.77, -0.18, 0.25], grads: [0.05, 0, 0.09, 0, -0.04] },
-  { id: 'a1', letter: 'a', name: 'a_1', size: '512', slots: [0, 1, 2, 3, null, 511], depth: 5, scale: 0.8,
-    values: [0.42, 0, 0.77, 0, 0.25], grads: [0.05, -0.11, 0.09, 0.07, -0.04] },
-  { id: 'z2', letter: 'z', name: 'z_2', size: '256', slots: [0, 1, 2, null, 254, 255], depth: 4, scale: 0.8,
-    values: [-0.22, 0.55, 0.18, 0.9, -0.4], grads: [0, -0.08, 0.2, -0.15, 0] },
-  { id: 'a2', letter: 'a', name: 'a_2', size: '256', slots: [0, 1, 2, null, 254, 255], depth: 3, scale: 0.8,
-    values: [0, 0.55, 0.18, 0.9, 0], grads: [0.12, -0.08, 0.2, -0.15, 0.06] },
-  { id: 'l', letter: 'l', name: 'l', size: '10', slots: [0, 1, 2, null, 8, 9], depth: 2, scale: 2,
-    values: [-0.5, 0.1, 1.9, 0.2, -0.3], grads: [0.02, 0.03, -0.3, 0.03, 0.02] },
-  { id: 'p', letter: 'p', name: 'p', size: '10', slots: [0, 1, 2, null, 8, 9], depth: 1, scale: 0.7,
-    values: [0.02, 0.03, 0.7, 0.03, 0.02], grads: [0, 0, -1.43, 0, 0] },
-  { id: 'L', letter: 'L', name: 'L', size: '1', slots: [0], depth: 0, scale: 0.5, values: [0.36], grads: [1] }
+  { id: 'x', letter: 'x', name: 'x', size: '256', depth: 7 },
+  { id: 'z1', letter: 'z', layer: 1, name: 'z_1', size: '512', depth: 6 },
+  { id: 'a1', letter: 'a', layer: 1, name: 'a_1', size: '512', depth: 5 },
+  { id: 'z2', letter: 'z', layer: 2, name: 'z_2', size: '256', depth: 4 },
+  { id: 'a2', letter: 'a', layer: 2, name: 'a_2', size: '256', depth: 3 },
+  { id: 'l', letter: 'l', name: 'l', size: '10', depth: 2 },
+  { id: 'p', letter: 'p', name: 'p', size: '10', depth: 1 },
+  { id: 'L', letter: 'L', name: 'L', size: '1', depth: 0 }
 ];
+// a circle's label is its column's letter and its position; hidden layers add the layer first, as in z_{1,3}
+const nodeTex = (column, slot) => (column.id === 'L' ? 'L' : column.layer ? `${column.letter}_{${column.layer},${slot}}` : `${column.letter}_{${slot}}`);
+// pixels and probabilities are shaded on their own 0–1 scale, everything else against its column's largest value
+COLUMNS.forEach(column => {
+  column.slots = pass.slots[column.id];
+  column.values = pass.values[column.id];
+  column.grads = pass.grads[column.id];
+  column.scale = column.id === 'x' || column.id === 'p' ? 1 : Math.max(...column.values.map(Math.abs)) || 1;
+});
 // LINKS[i] connects column i to column i + 1.
 const LINKS = [
   { kind: 'dense', op: 'multi', matrix: { id: 'w1', name: 'W_1', dims: '256 \\times 512', depth: 7 } },
@@ -38,7 +40,7 @@ const LINKS = [
   { kind: 'all', op: 'sftmx' },
   { kind: 'loss', op: 'inverse_log_max' }
 ];
-const LABEL = 2; // the drawing in this example is a 2
+const LABEL = pass.label;
 const CHOSEN = { x: 7, z: 3 }; // the weight w₇,₃ drawn as "one edge"
 
 // --- layout ------------------------------------------------------------------------------------------------------
@@ -102,7 +104,7 @@ const KEY = {
 };
 const CAPTIONS = {
   '': `${KEY.values}<span class="sep">·</span>${line(rich('one matrix cell per weight Neuron'))}`,
-  edge: line(rich('one weight: $x_7 \\cdot w_{7,3}$ flows into $z_3$')),
+  edge: line(rich('one weight: $x_7 \\cdot w_{7,3}$ flows into $z_{1,3}$')),
   relu: `<i class="sw sw-dead"></i>${line(rich('dead units: $z \\le 0$, so $\\pd{a}{z} = 0$'))}`,
   softmax: line(rich('every logit feeds every probability: $10 \\times 10$ local gradients')),
   loss: line(rich('only $p_y$ feeds the loss, $y = 2$ in this example')),
@@ -135,6 +137,16 @@ const STAGES = {
   ]
 };
 const stageCaption = (kind, stage) => (kind === 'forward' ? KEY.cache : KEY.grad) + line(rich(STAGES[kind][stage]));
+
+// numbers in TeX: two significant digits below 1, two decimals above
+const num = v => {
+  if (!v) return '0';
+  const text = Math.abs(v) >= 1 ? v.toFixed(2) : v.toPrecision(2);
+  return text.includes('e') ? v.toExponential(1).replace(/e([-+]\d+)/, (_, e) => `\\times 10^{${Number(e)}}`) : text;
+};
+const factor = v => (v < 0 ? `(${num(v)})` : num(v));
+// backward: chip k leaves its child at DEPART(k) and lands in the parent at ARRIVE(k), as fractions of the stage
+const DEPART = k => 0.12 + k * 0.08, ARRIVE = k => DEPART(k) + 0.22;
 
 // --- drawing helpers ---------------------------------------------------------------------------------------------
 function el(name, attrs = {}, parent) {
@@ -171,7 +183,6 @@ const shade = (v, scale, amount = 1) => {
   const alpha = (0.2 + 0.7 * Math.min(1, Math.abs(v) / scale)) * amount;
   return { fill: `rgba(${v > 0 ? POS : NEG},${alpha.toFixed(3)})`, dark: alpha > 0.52 };
 };
-const noise = (a, b, c) => { const s = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453; return (s - Math.floor(s)) * 2 - 1; };
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const seg = (p, a, b) => clamp01((p - a) / (b - a));
@@ -219,13 +230,14 @@ export function buildGraph(root) {
       node.chosen = (column.id === 'x' && slot === CHOSEN.x) || (column.id === 'z1' && slot === CHOSEN.z);
       node.ring = el('circle', { cx: x, cy: y, r: column.r + 3.4, class: 'ring', opacity: 0 }, ringG);
       node.circle = el('circle', { cx: x, cy: y, r: column.r, class: 'node' }, nodeG);
-      for (const [cls, on] of [['dead', node.dead], ['chosen', node.chosen], ['py', column.id === 'p' && slot === LABEL]]) if (on) node.circle.classList.add(cls);
+      node.featured = slot === pass.featured[column.id];
+      for (const [cls, on] of [['dead', node.dead], ['chosen', node.chosen], ['featured', node.featured], ['py', column.id === 'p' && slot === LABEL]]) if (on) node.circle.classList.add(cls);
       if (column.id === 'x' || column.id === 'a1') node.circle.classList.add('hot');
       node.bx = x + column.r * 0.72;
       node.by = y - column.r * 0.72;
       node.badge = el('rect', { x: -3.6, y: -3.6, width: 7.2, height: 7.2, rx: 1.8, class: 'badge', transform: `translate(${node.bx} ${node.by}) scale(0)` }, badgeG);
-      const name = column.id === 'L' ? 'L' : `${column.letter}_{${slot}}`;
-      node.label = label(x, y, name, `node-label${node.chosen ? ' chosen' : ''}`, slot > 99 ? 9.4 : 10.6);
+      const size = column.layer ? (slot > 99 ? 8.2 : 9.6) : slot > 99 ? 9.4 : 10.6;
+      node.label = label(x, y, nodeTex(column, slot), `node-label${node.chosen ? ' chosen' : ''}`, size);
       column.nodes.push(node);
       nodes.push(node);
     });
@@ -286,13 +298,15 @@ export function buildGraph(root) {
     el('rect', { x: m.x - 1, y: m.y - 1, width: m.w + 2, height: m.h + 2, class: 'matrix-bg' }, g);
     el('path', { d: `M${m.x - BRACKET + 3} ${m.y - 3}h-3v${m.h + 6}h3M${m.x + m.w + BRACKET - 3} ${m.y - 3}h3v${m.h + 6}h-3`, class: 'bracket' }, g);
     m.cells = [];
+    const weights = pass.matrices[m.id];
+    const maxW = Math.max(...weights.w.flat().map(Math.abs));
     let maxGrad = 0;
     a.nodes.forEach(src => b.nodes.forEach(dst => {
       const row = a.slots.indexOf(src.slot), col = b.slots.indexOf(dst.slot);
-      const w = noise(src.slot, dst.slot, n);
+      const w = weights.w[src.k][dst.k] / maxW;
       const x = m.cols[col] - CELL / 2 + 0.8, y = m.rows[row] - CELL / 2 + 0.8;
       const chosen = n === 0 && src.slot === CHOSEN.x && dst.slot === CHOSEN.z;
-      const cell = { row: src.k, col: dst.k, grad: Math.abs(src.value * dst.grad) };
+      const cell = { row: src.k, col: dst.k, grad: Math.abs(weights.grad[src.k][dst.k]) };
       cell.rect = el('rect', { x, y, width: CELL - 1.6, height: CELL - 1.6, rx: 1.6, fill: `rgba(${w > 0 ? POS : NEG},${(0.12 + 0.5 * Math.abs(w)).toFixed(3)})`, class: `cell${chosen ? ' chosen' : ''}`, 'stroke-opacity': 0 }, g);
       cell.dot = el('circle', { cx: x + CELL - 3.6, cy: y + 2, r: 1.5, class: 'cell-cache', opacity: 0 }, g);
       cell.mark = el('rect', { x: x + 0.6, y: y + 0.6, width: CELL - 2.8, height: CELL - 2.8, rx: 1.2, class: 'cell-grad', opacity: 0 }, g);
@@ -305,11 +319,50 @@ export function buildGraph(root) {
     badge(m.x + m.w / 2, 22, m.depth);
   });
 
+  // --- the featured path ------------------------------------------------------------------------------------------
+  // Forward: the cached derivative rides back from the child to the parent that stores it, as a labelled chip.
+  // Backward: every shown child's grad flies into the featured parent, and the parent's grad adds up as they land.
+  const F = COLUMNS.map(column => column.nodes.find(node => node.featured));
+  const nodeName = node => nodeTex(COLUMNS[node.c], node.slot);
+  const chip = (html, cls) => {
+    const span = document.createElement('span');
+    span.className = `chip ${cls}`;
+    span.innerHTML = html;
+    overlay.append(span);
+    return span;
+  };
+  const place = (el, x, y, scale, opacity) => {
+    set(el, 'style', opacity <= 0 ? 'opacity:0' : `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%;opacity:${opacity.toFixed(3)};transform:translate(-50%,-50%) scale(${scale.toFixed(3)})`);
+  };
+  const fwdChips = LINKS.map((_, i) => chip(tex(`\\pd{${nodeName(F[i + 1])}}{${nodeName(F[i])}} = ${num(pass.links[i].local)}`, false, true), 'chip-loc'));
+  const bwdChips = LINKS.map((_, i) => {
+    const link = pass.links[i], child = COLUMNS[i + 1];
+    const chips = link.terms.map(([slot, local, grad]) => {
+      const from = child.nodes.find(node => node.slot === slot);
+      return { from, product: local * grad, el: chip(tex(num(grad), false, true), 'chip-grad') };
+    });
+    if (link.rest.count) {
+      const gap = child.slots.indexOf(null);
+      chips.push({ from: { x: X[i + 1], y: gap < 0 ? CY : child.ys[gap] }, product: link.rest.sum, el: chip(`+${link.rest.count}`, 'chip-grad chip-rest') });
+    }
+    chips.forEach(c => { c.burst = el('circle', { cx: F[i].x, cy: F[i].y, r: R, class: 'burst', opacity: 0 }, ringG); });
+    return chips;
+  });
+  const sums = LINKS.map(() => chip('', 'chip-sum'));
+  const arrivedAt = (i, p) => bwdChips[i].filter((_, k) => p >= ARRIVE(k)).length;
+  function ledger(i, arrived) {
+    const link = pass.links[i], all = bwdChips[i].length;
+    const parts = link.terms.slice(0, arrived).map(([, local, grad]) => `\\loc{${factor(local)}}\\cdot\\gr{${factor(grad)}}`);
+    if (link.rest.count && arrived === all) parts.push(`\\underset{\\text{${link.rest.count} more}}{${factor(link.rest.sum)}}`);
+    const rhs = !arrived ? '\\cdots' : parts.join(' + ') + (arrived < all ? ' + \\cdots' : ` = \\gr{${num(link.total)}}`);
+    return KEY.grad + line(tex(`\\gr{\\pd{L}{${nodeName(F[i])}}} = ${rhs}`, false, true));
+  }
+
   // --- one pass, drawn as a function of time ---------------------------------------------------------------------
   // kind: 'base' (values only), 'forward' and 'backward' (animated, t in ms), 'grads' (backward finished).
   const last = COLUMNS.length - 1;
   function draw(kind, t = Infinity) {
-    const progress = backward => LINKS.map((_, i) => clamp01((t - (backward ? last - 1 - i : i) * STAGE) / STAGE));
+    const progress = backward => LINKS.map((_, i) => clamp01((t - (backward ? last - 1 - i : i) * STAGE[kind]) / STAGE[kind]));
     const fwd = kind === 'forward' ? progress(false) : LINKS.map(() => 1);
     const bwd = kind === 'backward' ? progress(true) : LINKS.map(() => (kind === 'grads' ? 1 : 0));
     const cached = kind === 'forward' || kind === 'backward' || kind === 'grads';
@@ -323,6 +376,7 @@ export function buildGraph(root) {
       const read = kind === 'backward' && out ? bell(bwd[c], outDense ? 0.5 : 0.3, outDense ? 0.8 : 0.62) : 0;
       const ring = c === last ? (kind === 'backward' || kind === 'grads' ? 1 : 0)
         : out ? smooth(seg(bwd[c], outDense ? 0.6 : 0.46, outDense ? 0.84 : 0.72)) : 0;
+      const landed = kind === 'backward' && out ? arrivedAt(c, bwd[c]) / bwdChips[c].length : 1;
       column.nodes.forEach(node => {
         const { fill: color, dark } = shade(node.value, node.scale, fill);
         set(node.circle, 'fill', color);
@@ -331,8 +385,37 @@ export function buildGraph(root) {
         flag(node.label, 'pending', fill < 0.03);
         set(node.badge, 'transform', `translate(${node.bx} ${node.by}) scale(${(cache * (1 + 0.4 * read)).toFixed(3)})`);
         flag(node.badge, 'is-read', read > 0.05);
-        set(node.ring, 'opacity', (ring * node.ringT).toFixed(3));
+        set(node.ring, 'opacity', ((node.featured && kind === 'backward' && out ? landed : ring) * node.ringT).toFixed(3));
       });
+    });
+
+    LINKS.forEach((link, i) => {
+      // forward: ∂child/∂parent leaves the child and settles above the parent
+      const p = fwd[i], P = F[i], C = F[i + 1];
+      const [ca, cb] = link.kind === 'dense' ? [0.64, 0.84] : [0.58, 0.78];
+      const q = kind === 'forward' ? smooth(seg(p, ca, cb)) : 0;
+      const shown = kind === 'forward' && p > ca && p < 1 ? Math.min(seg(p, ca, ca + 0.04), 1 - seg(p, 0.95, 1)) : 0;
+      place(fwdChips[i], C.x + (P.x - C.x) * q, C.y + (P.y - R - 17 - C.y) * q, 0.7 + 0.3 * q, shown);
+      // backward: each child's grad flies into the parent, which bursts as it lands; the running sum sits above it
+      const pb = bwd[i];
+      bwdChips[i].forEach((c, k) => {
+        // each chip swoops in on its own arc, so they converge on the parent from different sides
+        const go = smooth(seg(pb, DEPART(k), ARRIVE(k)));
+        const bend = (k % 2 ? 1 : -1) * (0.18 + 0.05 * k) * go * (1 - go) * 4;
+        const visible = kind === 'backward' && pb > DEPART(k) && pb < ARRIVE(k) + 0.03 ? Math.min(seg(pb, DEPART(k), DEPART(k) + 0.03), 1 - seg(pb, ARRIVE(k), ARRIVE(k) + 0.03)) : 0;
+        const dx = P.x - c.from.x, dy = P.y - c.from.y;
+        place(c.el, c.from.x + dx * go - dy * bend, c.from.y + dy * go + dx * bend, 1 + 0.15 * Math.sin(Math.PI * go) - 0.45 * seg(pb, ARRIVE(k) - 0.06, ARRIVE(k)), visible);
+        const b = kind === 'backward' ? seg(pb, ARRIVE(k), ARRIVE(k) + 0.12) : 0;
+        set(c.burst, 'r', (R + 3 + 16 * b).toFixed(1));
+        set(c.burst, 'opacity', b > 0 && b < 1 ? (0.75 * (1 - b)).toFixed(3) : 0);
+      });
+      const arrived = kind === 'backward' ? arrivedAt(i, pb) : 0;
+      const all = bwdChips[i].length;
+      const partial = arrived === all ? pass.links[i].total : bwdChips[i].slice(0, arrived).reduce((sum, c) => sum + c.product, 0);
+      const html = tex(`\\textstyle\\Sigma = ${num(partial)}`, false, true);
+      if (memo.get(sums[i])?.html !== html) { sums[i].innerHTML = html; memo.set(sums[i], { ...memo.get(sums[i]), html }); }
+      flag(sums[i], 'is-final', arrived === all);
+      place(sums[i], P.x, P.y - R - 15, 1, arrived && pb < 1 ? Math.min(1, 1 - seg(pb, 0.97, 1)) : 0);
     });
 
     edges.forEach(e => {
@@ -388,8 +471,8 @@ export function buildGraph(root) {
   let frame = 0;
   let playing = null;
   const stop = () => { cancelAnimationFrame(frame); playing = null; };
-  const total = LINKS.length * STAGE + HOLD;
   function play(kind) {
+    const total = LINKS.length * STAGE[kind] + HOLD;
     stop();
     if (reduceMotion.matches) {
       draw(kind, Infinity);
@@ -397,15 +480,21 @@ export function buildGraph(root) {
       listener(kind, LINKS.length);
       return;
     }
-    playing = { kind, start: performance.now(), stage: -1 };
+    playing = { kind, start: performance.now(), stage: -1, key: '' };
     const tick = now => {
-      let t = now - playing.start;
+      let t = Math.max(0, now - playing.start); // a frame's timestamp can precede the start by a hair
       if (t >= total) { playing.start = now; t = 0; }
-      const stage = Math.min(LINKS.length, Math.floor(t / STAGE));
+      const stage = Math.min(LINKS.length, Math.floor(t / STAGE[kind]));
       if (stage !== playing.stage) {
         playing.stage = stage;
-        caption.innerHTML = stageCaption(kind, stage);
         listener(kind, stage);
+      }
+      const link = LINKS.length - 1 - stage;
+      const arrived = kind === 'backward' && stage < LINKS.length ? arrivedAt(link, (t - stage * STAGE[kind]) / STAGE[kind]) : -1;
+      const key = `${stage}:${arrived}`;
+      if (key !== playing.key) {
+        playing.key = key;
+        caption.innerHTML = arrived >= 0 ? ledger(link, arrived) : stageCaption(kind, stage);
       }
       draw(kind, t);
       frame = requestAnimationFrame(tick);

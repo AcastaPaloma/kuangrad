@@ -1,4 +1,4 @@
-// Text formatting shared by the article, the cards and the graph: `code`, **bold**, *italic*, $inline$ and $$display$$
+// Text formatting shared by the article, the cards and the graph: `code`, **bold**, *italic*, [[term::note]], $inline$ and $$display$$
 // TeX typeset by the vendored KaTeX (loaded as a classic script before any module runs), and the names Neuron and
 // kuangrad, which are always set as code.
 const MACROS = {
@@ -23,10 +23,18 @@ const prose = text => escapeHtml(text)
   .replace(/\b(?:Neurons?|kuangrad)\b/g, '<code>$&</code>');
 
 // Punctuation right after inline math stays on its line.
-export const rich = source => String(source).split(/(`[^`]+`|\$\$[^$]+\$\$|\$[^$]+\$[.,;:)]*)/).map(part => {
+const inline = source => String(source).split(/(`[^`]+`|\$\$[^$]+\$\$|\$[^$]+\$[.,;:)]*)/).map(part => {
   if (part.length > 1 && part.startsWith('`')) return `<code>${escapeHtml(part.slice(1, -1))}</code>`;
   if (part.startsWith('$$')) return tex(part.slice(2, -2), true);
   const math = /^\$([^$]+)\$(.*)$/.exec(part);
   if (math) return math[2] ? `<span class="nobr">${tex(math[1])}${escapeHtml(math[2])}</span>` : tex(math[1]);
   return prose(part);
+}).join('');
+
+// [[term::note]] marks a term with a short explanation that opens on hover, focus or tap.
+export const rich = source => String(source).split(/(\[\[[\s\S]+?\]\])/).map(part => {
+  const note = /^\[\[([\s\S]+?)::([\s\S]+)\]\]$/.exec(part);
+  return note
+    ? `<span class="term" tabindex="0">${inline(note[1])}<span class="term-note" role="tooltip">${inline(note[2])}</span></span>`
+    : inline(part);
 }).join('');
