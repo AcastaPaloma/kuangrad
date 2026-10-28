@@ -16,6 +16,9 @@
 .prob-value { text-align: right; }
 .probs li.is-best { color: var(--ink); }
 .probs li.is-best .prob-bar { background: var(--accent); }
+/* the drawing after frame(): cropped, scaled to 14 rows and centred */
+.seen { margin: 16px 0 0; display: flex; align-items: center; gap: 10px; font: 11.5px/1.35 Arial, sans-serif; color: var(--muted); }
+.seen canvas { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--rule); border-radius: 3px; image-rendering: pixelated; }
 
 .loss-figure { margin: 4px 0 28px; }
 .loss-chart svg { display: block; overflow: visible; }

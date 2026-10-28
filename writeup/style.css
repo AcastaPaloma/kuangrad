@@ -31,7 +31,7 @@ a { color: var(--accent); }
   height: calc(100vh - var(--footer-h));
   height: calc(100dvh - var(--footer-h));
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, var(--split, 1.12fr)) minmax(0, 1fr);
   overflow: clip;
 }
 
@@ -254,6 +254,12 @@ body:not(.is-ready) .card { transition: none; }
 
 /* ---- right: the article ---------------------------------------------------------------------------------------- */
 .notes { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--rule); background: var(--paper); }
+/* split.js: the draggable line between the panels, a few pixels either side of the border */
+.splitter { position: absolute; z-index: 60; top: 0; bottom: 0; left: -6px; width: 11px; cursor: col-resize; touch-action: none; outline: 0; }
+.splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 3px; background: var(--accent); opacity: 0; transition: opacity .15s; }
+.splitter:hover::after, .splitter:focus-visible::after, .is-splitting .splitter::after { opacity: .55; }
+.is-splitting { cursor: col-resize; user-select: none; }
+.is-splitting iframe, .is-splitting canvas { pointer-events: none; }
 .reading-nav { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(24px, 4vw, 64px); font-size: 14px; }
 #contents-toggle { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
 #contents-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; transition: transform .15s; }
@@ -340,6 +346,7 @@ body:not(.is-ready) .card { transition: none; }
 @media (max-width: 760px) {
   .workspace { grid-template-columns: 1fr; grid-template-rows: minmax(0, 50%) minmax(0, 1fr); }
   .notes { border-left: 0; border-top: 1px solid var(--rule); }
+  .splitter { display: none; }
   .visual-head { height: 34px; padding: 0 16px; }
   .graph-wrap { width: min(100% - 32px, 24vh * 720 / 346); width: min(100% - 32px, 24dvh * 720 / 346); margin-top: 12px; }
   .graph-caption { display: none; }

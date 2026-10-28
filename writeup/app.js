@@ -3,6 +3,7 @@ import { snippets } from './snippets.js';
 import { buildGraph } from './graph.js';
 import { renderCard, jacobianCard } from './cards.js';
 import { escapeHtml, rich, tex } from './format.js';
+import './split.js';
 
 const reader = document.getElementById('reader');
 const article = document.getElementById('article');

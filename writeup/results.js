@@ -1,6 +1,7 @@
 import { run } from './results/run.js';
-import { unpack, forward, argmax } from './infer.js';
+import { unpack, forward, argmax, frame } from './infer.js';
 import { rich } from './format.js';
+import './split.js';
 
 const N = 16;
 const pad = document.getElementById('pad');
@@ -8,6 +9,7 @@ const ctx = pad.getContext('2d');
 const guessDigit = document.getElementById('guess-digit');
 const guessNote = document.getElementById('guess-note');
 const probsList = document.getElementById('probs');
+const seen = document.getElementById('seen').getContext('2d');
 const pixels = new Uint8Array(N * N); // row-major, 1 = ink: the same 256 values as a dataset.json sample
 let layers = null;
 
@@ -15,7 +17,7 @@ let layers = null;
 const count = n => n.toLocaleString('en-US');
 const hours = (run.seconds / 3600).toFixed(1);
 document.getElementById('summary').innerHTML = rich(`The network from the write-up, ${run.layers.map(([rows]) => rows).join(' → ')} → ${run.layers.at(-1)[1]}, after ${count(run.iterations)} training steps: one drawing per step, learning rate 0.003, ${hours} hours of pure Python on one CPU core. The drawing pad runs its ${count(run.parameters)} trained weights and biases through the same forward pass as \`inference.py\`.`);
-document.getElementById('note').innerHTML = rich(`Over the last 200 steps the loss averaged ${run.last200.toFixed(2)}, down from 2.30 (a uniform guess over ten digits). It labels ${count(run.correct)} of the ${count(run.samples)} drawings in \`dataset.json\` correctly, but those are the drawings it trained on, so a digit you draw is the fairer test. It learned my handwriting: a 3 with a flat top works, a 3 with two round bumps usually doesn’t, because none of the 100 3s it saw look like that.`);
+document.getElementById('note').innerHTML = rich(`Over the last 200 steps the loss averaged ${run.last200.toFixed(2)}, down from 2.30 (a uniform guess over ten digits). It labels ${count(run.correct)} of the ${count(run.samples)} drawings in \`dataset.json\` correctly, but those are the drawings it trained on, so a digit you draw is the fairer test. It learned my handwriting: a 3 with a flat top works, a 3 with two round bumps usually doesn’t, because none of the 100 3s it saw look like that. It also learned where my digits sit: each input is one fixed cell, and moved two cells over, its own training drawings are right only 42% of the time. So before your drawing goes in, the pad crops it, scales it to 14 rows tall and centres it, the way all of mine are drawn.`);
 
 const movingAverage = (values, window) => {
   let sum = 0;
@@ -71,9 +73,15 @@ const draw = () => {
 probsList.innerHTML = Array.from({ length: 10 }, (_, d) => `<li><span class="prob-digit">${d}</span><span class="prob-track"><span class="prob-bar"></span></span><span class="prob-value"></span></li>`).join('');
 const rows = [...probsList.children];
 const predict = () => {
+  const framed = frame(pixels);
+  const cell = seen.canvas.width / N;
+  seen.fillStyle = '#fff';
+  seen.fillRect(0, 0, seen.canvas.width, seen.canvas.height);
+  seen.fillStyle = '#1a1a1a';
+  framed.forEach((on, i) => { if (on) seen.fillRect((i % N) * cell, Math.floor(i / N) * cell, cell, cell); });
   if (!layers) return;
   const empty = !pixels.some(Boolean);
-  const probs = empty ? Array(10).fill(0) : forward(layers, pixels);
+  const probs = empty ? Array(10).fill(0) : forward(layers, framed);
   const best = argmax(probs);
   guessDigit.textContent = empty ? '?' : best;
   guessNote.textContent = empty ? 'Draw a digit to see its guess.' : `${(probs[best] * 100).toFixed(1)}% sure`;
