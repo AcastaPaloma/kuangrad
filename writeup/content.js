@@ -24,7 +24,7 @@ export const steps = [
         ],
         close: "have fun reading, I learned so much - try implementing one yourself, so rewarding !"
       } },
-      { note: '**I didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes 3 to 4 seconds on my M5 Pro.' },
+      { note: '**I didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes about 2.5 seconds on my M5 Pro.' },
       'kuangrad is an autograd engine where every number is its own Python object, plus a small neural network trained with it. A weight matrix is a list of lists of objects, and backpropagation is a walk over those objects. The engine is two short files, `neuron.py` and `operations.py`, about 115 lines together.',
       'The network reads a 16 × 16 black-and-white drawing of a digit and outputs ten probabilities, one per digit. The 1,000 training drawings were made by hand in a small tkinter app that lives in the same repo.',
       'The left panel follows along. The graph at the top is what kuangrad builds for one example. Each circle is a Neuron, shaded by its value: blue for positive, purple for negative, white for zero. Between the layers sit the weight matrices $W_1$, $W_2$ and $W_3$, one cell per weight, and every cell is a Neuron too. Every symbol is in the notation key in the corner.'
@@ -222,7 +222,7 @@ export const steps = [
   {
     id: 'cost', chapter: 'Cost', level: 2, title: 'Where the time goes',
     body: [
-      'On my M5 Pro with Python 3.14, one iteration takes about 3 seconds: about 2.5 s backward, 0.2 s forward, and the rest logging and resetting the parameters. At that rate, the 10,000 iterations in the loop take about 8½ hours.',
+      'On my M5 Pro with Python 3.14, the 10,000 iterations took 6.8 hours, about 2.5 seconds each, and nearly all of that is the backward pass.',
       'Almost all of it is `local_grad_to` scanning lists from the front: 50.7 million comparisons per backward pass to find 531,064 numbers.',
       'A dict keyed by child brings the backward pass from 2.5 s to 0.18 s, with identical gradients.'
     ],

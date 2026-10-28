@@ -222,7 +222,7 @@ function costCard() {
     ['Neurons visited per backward', '267,295'],
     ['local-gradient entries', '531,064'],
     ['comparisons in local_grad_to', '50,743,610'],
-    ['10,000 iterations at ~3.1 s', '≈ 8.6 hours']
+    ['10,000 iterations, as run', '6.8 hours']
   ];
   const wrap = document.createElement('div');
   wrap.className = 'cost-card';
@@ -232,7 +232,7 @@ function costCard() {
       <div class="bar-row ${cls}" title="${label}: ${s.toFixed(2)} s"><span class="bar-label">${label}</span><span class="bar-track"><span class="bar" style="--w:${(s / max) * 100}%"></span></span><span class="bar-value">${s.toFixed(2)} s</span></div>`).join('')}
     </div>
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${rich(k)}</dt><dd>${v}</dd></div>`).join('')}</dl>
-    <p class="cost-note">Samples 500–506, the same weights for both lookups. All 265,482 parameter gradients came out identical. A full step in the training log takes 3.1 s (median of 1,573), which also counts logging and the reset.</p>`;
+    <p class="cost-note">Samples 500–506, the same weights for both lookups. All 265,482 parameter gradients came out identical. In the real run a full step, logging and the reset included, averaged 2.46 s: about 3 s for the first 2,500 steps, then about 2.3 s.</p>`;
   return wrap;
 }
 
