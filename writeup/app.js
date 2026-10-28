@@ -148,6 +148,8 @@ const cards = steps.map(step => {
   return card;
 });
 const STACK_DEPTH = 4;
+// Cards that are drawings rather than listings: while one is up, the graph shrinks to give it room.
+const WIDGETS = new Set(['digits', 'edge', 'cost']);
 
 let current = -1;
 function show(index) {
@@ -168,6 +170,7 @@ function show(index) {
   cards[index].refreshMore();
   graph.setState(step.graph);
   visual.classList.toggle('is-animated', step.graph.mode === 'forward' || step.graph.mode === 'backward');
+  visual.classList.toggle('has-widget', WIDGETS.has(step.card.type));
   if (!keyChosen && !matchMedia('(max-width: 760px)').matches) setKey(index > 0, false);
   blocks.forEach((block, i) => block.classList.toggle('is-current', i === index));
   tocLinks.forEach((link, i) => i === index ? link.setAttribute('aria-current', 'location') : link.removeAttribute('aria-current'));

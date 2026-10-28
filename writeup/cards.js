@@ -134,8 +134,8 @@ function edgeCard() {
     <div class="edge-lists">
       <div><h4>x₇.local_grads <span>512 entries</span></h4><ol>
         <li>[z₁,₀, x₇, w₇,₀]</li><li>[z₁,₁, x₇, w₇,₁]</li><li>[z₁,₂, x₇, w₇,₂]</li><li class="is-hit">[z₁,₃, x₇, ${w}]</li><li class="more">… 508 more</li></ol></div>
-      <div><h4>w₇,₃.local_grads <span>1 entry</span></h4><ol><li class="is-hit">[z₁,₃, w₇,₃, 1.0]</li></ol>
-        <h4>z₁,₃.parents <span>513</span></h4><ol class="inline"><li>x₀</li><li>w₀,₃</li><li>…</li><li class="is-hit">x₇</li><li class="is-hit">w₇,₃</li><li>…</li><li>b₃</li></ol></div>
+      <div><h4>w₇,₃.local_grads <span>1 entry</span></h4><ol><li class="is-hit">[z₁,₃, w₇,₃, 1.0]</li></ol></div>
+      <div><h4>z₁,₃.parents <span>513</span></h4><ol class="inline"><li>x₀</li><li>w₀,₃</li><li>…</li><li class="is-hit">x₇</li><li class="is-hit">w₇,₃</li><li>…</li><li>b₃</li></ol></div>
     </div>`;
   return wrap;
 }
