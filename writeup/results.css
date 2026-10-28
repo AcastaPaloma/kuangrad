@@ -1,0 +1,48 @@
+/* Results tab: the trained network on a drawing pad (left) and its training run (right). */
+.pad-clear { padding: 5px 12px; border: 1px solid var(--rule); border-radius: 4px; font: 12px/1.2 Arial, sans-serif; color: var(--secondary); }
+.pad-clear:hover { color: var(--ink); background: #1a1a1a06; }
+/* the pad takes whatever width the guess column leaves, capped by the height */
+.pad-area { --gap: clamp(20px, 3.5vw, 48px); --side: clamp(20px, 3vw, 40px); --guess: 170px; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: var(--gap); padding: 0 var(--side) 40px; container-type: inline-size; }
+.pad-wrap { flex-shrink: 0; }
+#pad { display: block; width: min(52vh, 100cqw - var(--guess) - var(--gap) - 2 * var(--side), 460px); width: min(52dvh, 100cqw - var(--guess) - var(--gap) - 2 * var(--side), 460px); aspect-ratio: 1; border: 1px solid var(--rule); border-radius: 4px; background: #fff; touch-action: none; cursor: crosshair; box-shadow: 0 1px 2px #322d250d, 0 6px 20px #322d2512; }
+.pad-hint { margin: 12px 0 0; font: 12px/1.4 Arial, sans-serif; color: var(--muted); text-align: center; }
+.guess { width: var(--guess); flex-shrink: 0; }
+.guess-digit { margin: 0; font-size: 96px; line-height: 1; letter-spacing: -.02em; color: var(--accent); }
+.guess-note { margin: 6px 0 18px; min-height: 1.4em; font: 13px/1.4 Arial, sans-serif; color: var(--secondary); }
+.probs { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font: 11.5px/1 var(--mono); color: var(--muted); }
+.probs li { display: grid; grid-template-columns: 1.2em minmax(0, 1fr) 3.6em; align-items: center; gap: 8px; }
+.prob-track { height: 8px; background: #efeee9; border-radius: 4px; overflow: hidden; }
+.prob-bar { display: block; height: 100%; width: 0; background: #a9a8a1; border-radius: 4px; transition: width .15s; }
+.prob-value { text-align: right; }
+.probs li.is-best { color: var(--ink); }
+.probs li.is-best .prob-bar { background: var(--accent); }
+
+.loss-figure { margin: 4px 0 28px; }
+.loss-chart svg { display: block; overflow: visible; }
+.loss-chart .grid { stroke: #e9e8e3; }
+.loss-chart .tick, .loss-chart .axis { font: 11px Arial, sans-serif; fill: var(--muted); }
+.loss-chart polyline { fill: none; stroke-linejoin: round; }
+.loss-chart .raw { stroke: var(--muted); stroke-opacity: .32; stroke-width: .8; }
+.loss-chart .avg { stroke: var(--accent); stroke-width: 2; }
+.loss-figure figcaption { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 20px; font: 12.5px/1.5 Arial, sans-serif; color: var(--secondary); }
+.key-item { display: inline-flex; align-items: center; white-space: nowrap; }
+.key { display: inline-block; width: 16px; height: 0; margin-right: 7px; border-top: 2px solid var(--accent); }
+.key-raw { border-top: 1px solid #b9b8b0; }
+.reading-block .results-note { font-size: 16px; line-height: 1.7; color: var(--secondary); }
+
+/* a container query can't restyle .pad-area itself, so the narrower guess column is set on its children */
+@container (max-width: 560px) {
+  .pad-wrap, .guess { --guess: 128px; }
+  .guess-digit { font-size: 64px; }
+  .guess-note { margin-bottom: 10px; font-size: 12px; }
+  .probs { gap: 3px; font-size: 10.5px; }
+  .probs li { grid-template-columns: 1em minmax(0, 1fr) 3.3em; gap: 5px; }
+  .prob-track { height: 6px; }
+}
+
+@media (max-width: 760px) {
+  .pad-area { --gap: 18px; --side: 16px; padding-bottom: 14px; }
+  #pad { width: min(34vh, 100cqw - var(--guess) - var(--gap) - 2 * var(--side)); width: min(34dvh, 100cqw - var(--guess) - var(--gap) - 2 * var(--side)); }
+  .pad-hint { display: none; }
+  .reading-block .results-note { font-size: 15px; }
+}
