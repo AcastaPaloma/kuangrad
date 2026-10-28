@@ -27,6 +27,7 @@ export const steps = [
         '├── dataset.json             # 1,000 drawings, 100 per digit',
         '├── neuron.py                # one number + the edges around it',
         '├── operations.py            # multi · relu · sftmx · inverse_log_max',
+        '├── model_io.py              # save / load the weights as JSON',
         '└── forward_and_backward.py  # build, forward, backward, update',
         '',
         '# network, for one drawing:',
@@ -135,7 +136,7 @@ export const steps = [
       'The network is 256 → 512 → 256 → 10. Each weight and bias starts uniform in $\\pm\\frac{1}{\\sqrt{\\text{fan\\_in}}}$, so the sum feeding each unit stays around unit scale and the first logits don’t blow up.',
       'The parameters are just the Neurons inside `w1`, `w2`, `w3`, `b1`, `b2` and `b3`, collected into a set called `params`: 265,482 objects. In the graph they are the three matrices between the layers. Each weight is a Neuron like any other.'
     ],
-    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[19, 51]], focus: [28, 29, 51] },
+    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[26, 58]], focus: [35, 36, 58] },
     graph: { hl: ['w1', 'w2', 'w3'], mode: 'params', tag: 'params' }
   },
   {
@@ -157,7 +158,7 @@ export const steps = [
       } },
       'By the time `loss` exists, the whole graph is in memory: the 256 inputs, 1,557 new Neurons for the activations, the 265,482 parameters, and 531,064 local-gradient entries connecting them. Nothing has a gradient yet.'
     ],
-    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[54, 76]], focus: [60, 63, 66, 69, 72, 73, 76] },
+    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[64, 86]], focus: [70, 73, 76, 79, 82, 83, 86] },
     graph: { hl: ['all'], mode: 'forward', tag: 'forward' }
   },
   {
@@ -181,7 +182,7 @@ export const steps = [
       } },
       'Each parent is queued the first time it is seen. Summed over every child, those += give exactly $\\pd{L}{\\parent} = \\sum \\pd{\\child}{\\parent} \\cdot \\pd{L}{\\child}$. A pixel’s gradient is the sum of contributions from all 512 first-layer units that used it, and those contributions arrive one at a time, as each unit is popped.'
     ],
-    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[82, 94]], focus: [89] },
+    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[95, 107]], focus: [102] },
     graph: { hl: ['all'], mode: 'backward', tag: 'backward' }
   },
   {
@@ -201,7 +202,7 @@ export const steps = [
       'There is no separate optimizer step. When a parameter is popped, its gradient is already final (by the same depth argument), so it is updated on the spot, $\\texttt{value} \\mathrel{-}= \\text{LR} \\cdot \\texttt{grad}$, with $\\text{LR} = 3 \\times 10^{-3}$.',
       'That would be a bug in most engines. It is safe here only because `multi` copied `weight.value` into the local gradients during the forward pass. The Neurons still waiting in the queue read those stored floats, never the weights’ new values.'
     ],
-    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[86, 94]], focus: [93, 94] },
+    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[99, 107]], focus: [106, 107] },
     graph: { hl: ['w1', 'w2', 'w3'], mode: 'update', tag: 'value -= LR * grad' }
   },
   {
@@ -210,7 +211,7 @@ export const steps = [
       'After the walk, every parameter has its gradient zeroed and its `local_grads` cleared. The same happens to the 256 input Neurons, which are reused across iterations.',
       'Clearing `local_grads` also drops the references from the parameters to this iteration’s activations. Once the next iteration rebinds `z1`, `a1` and the `seen` set, nothing points at the old activation Neurons any more, and Python can free them.'
     ],
-    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[96, 101]], focus: [97, 98, 99, 100, 101] },
+    card: { type: 'code', file: 'forward_and_backward.py', ranges: [[109, 114]], focus: [110, 111, 112, 113, 114] },
     graph: { hl: ['x', 'w1', 'w2', 'w3'], mode: 'params', tag: 'reset' }
   },
 
@@ -240,7 +241,7 @@ export const steps = [
         '# 2. hold out a test set',
         '#    samples 0–4 and 996–999 are never drawn',
         '',
-        '# 3. log the loss to a file, plot it here',
+        '# 3. plot the logged loss (train_log.txt) here',
         '',
         '# 4. mini-batches: average grads over k drawings',
         '#    before each update',

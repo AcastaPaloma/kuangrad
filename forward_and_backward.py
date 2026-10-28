@@ -6,10 +6,17 @@ from random import *
 
 from neuron import Neuron
 from operations import multi, relu, sftmx, inverse_log_max
+from model_io import save_model
 
+import os
 from collections import deque
 from time import perf_counter
 LR = 3e-3
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+LOG_PATH = os.path.join(HERE, "train_log.txt")   # plot with: python plot_loss.py train_log.txt
+MODEL_PATH = os.path.join(HERE, "model.json")    # serve with: python serve.py
+CHECKPOINT_EVERY = 100
 
 ### Get input and labels
 dataset = load_dataset()
@@ -50,6 +57,9 @@ for row in range(hw2):
 # only the weights and biases are parameters, everything else is recomputed every forward pass
 params = {n for layer in (w1, w2, w3) for row in layer for n in row} | {*b1, *b2, *b3}
 
+layers = [(w1, b1), (w2, b2), (w3, b3)]
+log_file = open(LOG_PATH, "w")
+
 last_log = perf_counter()
 for fp in range(10000):
     # One forward pass, for now
@@ -77,7 +87,10 @@ for fp in range(10000):
 
     ##### COMPUTE GRADIENTS ####
     now = perf_counter()
-    print(f"iter {fp}: loss {loss.value:.4f}  ({now - last_log:.2f}s since last iter)")
+    line = f"iter {fp}: loss {loss.value:.4f}  ({now - last_log:.2f}s since last iter)"
+    print(line)
+    log_file.write(line + "\n")
+    log_file.flush()
     last_log = now
     loss.grad = 1.0
 
@@ -100,6 +113,11 @@ for fp in range(10000):
     for f in features:
         f.local_grads.clear()
 
+    if (fp + 1) % CHECKPOINT_EVERY == 0:
+        save_model(MODEL_PATH, layers)
+
+save_model(MODEL_PATH, layers)
+log_file.close()
 print("DONE!!!")
         
 
