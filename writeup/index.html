@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbfbfa">
+  <meta name="description" content="kuangrad: an autograd engine where every number is its own Python object, walked through code block by code block alongside the computation graph it builds.">
+  <title>kuangrad · Kuan Yi Wang</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#reader">Skip to write-up</a>
+  <main class="workspace">
+    <section class="visual" aria-label="Computation graph and code for the current passage">
+      <div class="visual-head"><span class="wordmark">kuangrad <span>· one drawing’s graph</span></span><span id="step-counter"></span></div>
+      <div class="graph-wrap" id="graph"></div>
+      <div class="stack" id="stack"></div>
+    </section>
+    <aside class="notes" aria-label="kuangrad write-up">
+      <div class="reading-nav">
+        <button id="contents-toggle" type="button" aria-expanded="false" aria-controls="contents-menu">Contents <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+        <span id="chapter-label"></span>
+      </div>
+      <nav id="contents-menu" aria-label="Write-up contents" hidden><div id="toc"></div></nav>
+      <div class="reader" id="reader" tabindex="0" aria-label="Read the kuangrad write-up">
+        <div id="article"></div>
+      </div>
+    </aside>
+  </main>
+  <footer class="site-footer">Made by <a href="https://www.kuant.space" target="_blank" rel="noopener">Kuan Yi Wang</a> with <span role="img" aria-label="love">❤️</span></footer>
+  <noscript><div class="no-script">This write-up needs JavaScript. The code it walks through is on <a href="https://github.com/AcastaPaloma/kuangrad">GitHub</a>.</div></noscript>
+</body>
+</html>

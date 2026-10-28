@@ -1,0 +1,26 @@
+# kuangrad write-up
+
+A static, scroll-driven walkthrough of the engine. The article is on the right. On the left, the computation graph
+gets a yellow box around the part being discussed, and each passage's code slides into a stack below it.
+
+- `content.js`: every passage, its card, and the graph region it highlights
+- `graph.js`: the computation graph and the yellow highlight boxes
+- `cards.js`: code listings and the visual cards (digits, edge, Jacobian, BFS, cost)
+- `app.js`: scroll tracking, the card stack, Contents
+- `snippets.js`: generated, do not edit
+
+Preview locally:
+
+```sh
+python3 -m http.server -d writeup 8000   # then open http://localhost:8000
+```
+
+Code cards are copied from the repo's `.py` files by line range. After editing a `.py` file or a card's `ranges`,
+regenerate them (CI-style check: add `--check`):
+
+```sh
+node writeup/scripts/build-snippets.mjs
+```
+
+The site at kuant.space copies this folder from `main` at build time (`scripts/sync-projects.mjs` in the portfolio
+repo), the same way it serves `/pi/` and `/genie/`.
