@@ -1,6 +1,6 @@
 // Renders the cards that stack up in the left panel: code listings and the small visuals that sit between them.
+import { escapeHtml, rich, tex } from './format.js';
 const NS = 'http://www.w3.org/2000/svg';
-const escapeHtml = value => value.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // --- Python highlighting -----------------------------------------------------------------------------------------
 const KEYWORDS = new Set('def return for in if else elif while not is import from class and or lambda as with pass break continue'.split(' '));
@@ -106,20 +106,29 @@ function digitsCard(digits) {
 }
 
 // --- one edge, stored twice --------------------------------------------------------------------------------------
+// Names and derivatives are KaTeX overlays on the drawing, placed in the SVG's coordinates.
 function edgeCard() {
   const wrap = document.createElement('div');
   wrap.className = 'edge-card';
+  const at = (x, y, html, cls = '') => `<span class="ef ${cls}" style="left:${(x / 460) * 100}%;top:${(y / 200) * 100}%">${html}</span>`;
   wrap.innerHTML = `
-    <svg viewBox="0 0 460 170" aria-label="x seven and w seven-three both feed z three. The derivative of z three with respect to x seven is w seven-three's value, 0.031; with respect to w seven-three it is x seven's value, 1.0.">
-      <defs><marker id="edge-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 8 4 0 8z"/></marker></defs>
-      <line x1="84" y1="44" x2="330" y2="85" marker-end="url(#edge-arrow)"/>
-      <line x1="84" y1="128" x2="330" y2="91" marker-end="url(#edge-arrow)"/>
-      <g class="edge-node"><circle cx="60" cy="40" r="23"/><text x="60" y="45">x₇</text><text class="edge-value" x="60" y="80">value 1.0</text></g>
-      <g class="edge-node"><circle cx="60" cy="132" r="23"/><text x="60" y="137">w₇,₃</text><text class="edge-value" x="60" y="168">value 0.031</text></g>
-      <g class="edge-node is-child"><circle cx="356" cy="88" r="25"/><text x="356" y="93">z₃</text></g>
-      <text class="edge-label" x="200" y="45">∂z₃/∂x₇ = w₇,₃ = 0.031</text>
-      <text class="edge-label" x="206" y="134">∂z₃/∂w₇,₃ = x₇ = 1.0</text>
-    </svg>
+    <div class="edge-figure" role="img" aria-label="x seven and w seven-three both feed z three. The derivative of z three with respect to x seven is w seven-three's value, 0.031; with respect to w seven-three it is x seven's value, 1.0.">
+      <svg viewBox="0 0 460 200" aria-hidden="true">
+        <defs><marker id="edge-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 8 4 0 8z"/></marker></defs>
+        <line x1="84" y1="52" x2="330" y2="96" marker-end="url(#edge-arrow)"/>
+        <line x1="84" y1="148" x2="330" y2="104" marker-end="url(#edge-arrow)"/>
+        <g class="edge-node"><circle cx="60" cy="48" r="23"/></g>
+        <g class="edge-node"><circle cx="60" cy="152" r="23"/></g>
+        <g class="edge-node is-child"><circle cx="356" cy="100" r="25"/></g>
+      </svg>
+      ${at(60, 48, tex('x_7', false, true), 'ef-name')}
+      ${at(60, 152, tex('w_{7,3}', false, true), 'ef-name')}
+      ${at(356, 100, tex('z_3', false, true), 'ef-name')}
+      ${at(60, 88, 'value 1.0', 'ef-value')}
+      ${at(60, 192, 'value 0.031', 'ef-value')}
+      ${at(205, 34, tex('\\displaystyle\\pd{z_3}{x_7} = w_{7,3} = 0.031', false, true), 'ef-grad')}
+      ${at(205, 170, tex('\\displaystyle\\pd{z_3}{w_{7,3}} = x_7 = 1.0', false, true), 'ef-grad')}
+    </div>
     <div class="edge-lists">
       <div><h4>x₇.local_grads <span>512 entries</span></h4><ol>
         <li>[z₀, x₇, w₇,₀]</li><li>[z₁, x₇, w₇,₁]</li><li>[z₂, x₇, w₇,₂]</li><li class="is-hit">[z₃, x₇, 0.031]</li><li class="more">… 508 more</li></ol></div>
@@ -134,7 +143,7 @@ const P = [0.02, 0.03, 0.70, 0.05, 0.02, 0.04, 0.03, 0.06, 0.03, 0.02];
 const MID = [240, 239, 236], POS = [31, 58, 138], NEG = [180, 35, 24];
 const mix = (to, t) => `rgb(${MID.map((m, i) => Math.round(m + (to[i] - m) * t)).join(',')})`;
 
-function jacobianCard() {
+export function jacobianCard() {
   const wrap = document.createElement('div');
   wrap.className = 'jacobian';
   const J = P.map((pi, i) => P.map((pj, j) => pi * ((i === j ? 1 : 0) - pj)));
@@ -161,11 +170,12 @@ function jacobianCard() {
   wrap.append(svg);
   const side = document.createElement('div');
   side.className = 'jacobian-side';
+  const entry = (i, j) => tex(`\\pd{p_{${i}}}{l_{${j}}} = ${J[i][j] < 0 ? '-' : ''}${Math.abs(J[i][j]).toFixed(4)}`);
   side.innerHTML = `
     <p class="j-readout" aria-live="polite">Hover a cell</p>
     <div class="j-legend"><span>−</span><i></i><span>+</span></div>
-    <p class="j-note">row i: p<sub>i</sub> · column j: logit z<sub>j</sub><br>colour: signed √|value|</p>
-    <dl><dt>∂p₂/∂z₂</dt><dd>${J[2][2].toFixed(3)}</dd><dt>∂p₂/∂z₇</dt><dd>${J[2][7].toFixed(3)}</dd><dt>∂p₀/∂z₉</dt><dd>${J[0][9].toFixed(4)}</dd></dl>`;
+    <p class="j-note">${rich('row $i$: $p_i$ · column $j$: logit $l_j$')}<br>colour: signed √|value|</p>
+    <ul class="j-examples"><li>${entry(2, 2)}</li><li>${entry(2, 7)}</li><li>${entry(0, 9)}</li></ul>`;
   wrap.append(side);
   const readout = side.querySelector('.j-readout');
   svg.addEventListener('pointerover', event => {
@@ -174,7 +184,7 @@ function jacobianCard() {
     svg.querySelectorAll('.j-cell.is-hover').forEach(c => c.classList.remove('is-hover'));
     target.classList.add('is-hover');
     const v = Number(target.dataset.v);
-    readout.innerHTML = `∂p<sub>${target.dataset.i}</sub>/∂z<sub>${target.dataset.j}</sub> = ${v < 0 ? '−' : ''}${Math.abs(v).toFixed(4)}`;
+    readout.innerHTML = tex(`\\pd{p_{${target.dataset.i}}}{l_{${target.dataset.j}}} = ${v < 0 ? '-' : ''}${Math.abs(v).toFixed(4)}`);
   });
   return wrap;
 }
@@ -226,7 +236,7 @@ function costCard() {
     <div class="bars">${bars.map(([label, s, cls]) => `
       <div class="bar-row ${cls}" title="${label}: ${s.toFixed(2)} s"><span class="bar-label">${label}</span><span class="bar-track"><span class="bar" style="--w:${(s / max) * 100}%"></span></span><span class="bar-value">${s.toFixed(2)} s</span></div>`).join('')}
     </div>
-    <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <dl class="facts">${facts.map(([k, v]) => `<div><dt>${rich(k)}</dt><dd>${v}</dd></div>`).join('')}</dl>
     <p class="cost-note">Samples 500–502, the same weights for both lookups. All 265,482 parameter gradients came out identical. Forward times ranged from 0.5 to 1.7 s.</p>`;
   return wrap;
 }
@@ -243,14 +253,13 @@ export function renderCard(step, { snippets, digits }) {
     const lines = snippets[step.id].filter(Boolean);
     meta = `lines ${lines[0][0]}–${lines[lines.length - 1][0]}`;
   }
-  node.innerHTML = `<header class="card-head"><span class="card-title">${escapeHtml(title)}</span><span class="card-meta">${escapeHtml(meta)}</span></header>`;
+  node.innerHTML = `<header class="card-head"><span class="card-title">${escapeHtml(title)}</span><span class="card-meta">${rich(meta)}</span></header>`;
   const body = document.createElement('div');
   body.className = 'card-body';
   if (card.type === 'code') body.innerHTML = codeCard(snippets[step.id], card.focus);
   else if (card.type === 'text') body.innerHTML = textCard(card.lines);
   else if (card.type === 'digits') body.append(digitsCard(digits));
   else if (card.type === 'edge') body.append(edgeCard());
-  else if (card.type === 'jacobian') body.append(jacobianCard());
   else if (card.type === 'bfs') body.append(bfsCard());
   else if (card.type === 'cost') body.append(costCard());
   node.append(body);

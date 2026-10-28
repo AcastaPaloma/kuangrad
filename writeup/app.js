@@ -1,7 +1,8 @@
-import { steps, digits } from './content.js';
+import { steps, details, digits } from './content.js';
 import { snippets } from './snippets.js';
 import { buildGraph } from './graph.js';
-import { renderCard } from './cards.js';
+import { renderCard, jacobianCard } from './cards.js';
+import { escapeHtml, rich, tex } from './format.js';
 
 const reader = document.getElementById('reader');
 const article = document.getElementById('article');
@@ -13,16 +14,17 @@ const menu = document.getElementById('contents-menu');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 // --- prose -------------------------------------------------------------------------------------------------------
-const escapeHtml = value => value.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-// Single-letter math names such as p_y and w_ij get a subscript; identifiers like local_grads or fan_in do not.
-const subscripts = html => html.replace(/(?<![\w])([A-Za-zδ∂])_([a-z0-9]{1,2})(?![\w])/g, '$1<sub>$2</sub>');
-const inline = source => source.split(/(`[^`]+`)/).map(part => part.startsWith('`')
-  ? `<code>${escapeHtml(part.slice(1, -1))}</code>`
-  : subscripts(escapeHtml(part).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\^\{(.+?)\}/g, '<sup>$1</sup>'))).join('');
+const stagesHtml = ({ kind, head, rows }) => `<table class="stages" data-kind="${kind}">
+  <thead><tr><th></th>${head.map(h => `<th>${rich(h)}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map((row, i) => `<tr data-stage="${i}"><td class="stage-n">${i + 1}</td>${row.map(cell => `<td>${rich(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+</table>`;
 const blockHtml = block => {
-  if (typeof block === 'string') return `<p>${inline(block)}</p>`;
-  if (block.list) return `<ul>${block.list.map(item => `<li>${inline(item)}</li>`).join('')}</ul>`;
-  if (block.math) return `<p class="math">${inline(block.math)}</p>`;
+  if (typeof block === 'string') return `<p>${rich(block)}</p>`;
+  if (block.list) return `<ul>${block.list.map(item => `<li>${rich(item)}</li>`).join('')}</ul>`;
+  if (block.math) return `<div class="math">${tex(block.math, true)}</div>`;
+  if (block.note) return `<p class="note">${rich(block.note)}</p>`;
+  if (block.stages) return stagesHtml(block.stages);
+  if (block.details) return `<p><button class="details-btn" type="button" data-details="${block.details}" aria-haspopup="dialog">${rich(block.label)}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button></p>`;
   return '';
 };
 
@@ -34,8 +36,8 @@ const blocks = steps.map((step, i) => {
   section.id = step.id;
   section.dataset.index = i;
   const heading = i === 0
-    ? `<header class="title-block"><p class="kicker">a write-up</p><h1>${escapeHtml(step.title)}</h1><p class="subtitle">An autograd engine, one Neuron at a time</p><p class="byline">Kuan Yi Wang · <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">source on GitHub</a></p></header>`
-    : `${step.chapter ? `<p class="chapter-kicker">${escapeHtml(step.chapter)}</p>` : ''}<h${step.level}>${escapeHtml(step.title)}</h${step.level}>`;
+    ? `<header class="title-block"><h1>${escapeHtml(step.title)}</h1><p class="subtitle">${rich('An autograd engine, one Neuron at a time')}</p><p class="byline">Kuan Yi Wang · <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">source on GitHub</a></p></header>`
+    : `${step.chapter ? `<p class="chapter-kicker">${escapeHtml(step.chapter)}</p>` : ''}<h${step.level}>${rich(step.title)}</h${step.level}>`;
   section.innerHTML = heading + step.body.map(blockHtml).join('');
   article.append(section);
   return section;
@@ -45,10 +47,30 @@ end.className = 'article-end';
 end.innerHTML = 'The code shown on the left is copied from the repository by <code>scripts/build-snippets.mjs</code>, line numbers included. <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">Read it on GitHub</a>.';
 article.append(end);
 
+// --- details dialog ----------------------------------------------------------------------------------------------
+const dialog = document.createElement('dialog');
+dialog.className = 'details-dialog';
+dialog.setAttribute('aria-labelledby', 'details-title');
+dialog.innerHTML = '<header><h2 id="details-title"></h2><button class="dialog-close" type="button" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button></header><div class="dialog-body"></div>';
+document.body.append(dialog);
+const dialogBody = dialog.querySelector('.dialog-body');
+dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); }); // the backdrop
+article.addEventListener('click', event => {
+  const button = event.target.closest('.details-btn');
+  if (!button) return;
+  const entry = details[button.dataset.details];
+  dialog.querySelector('#details-title').textContent = entry.title;
+  dialogBody.innerHTML = entry.body.map(blockHtml).join('');
+  if (entry.card === 'jacobian') dialogBody.append(jacobianCard());
+  dialog.showModal();
+  dialogBody.scrollTop = 0;
+});
+
 // --- contents ----------------------------------------------------------------------------------------------------
 const toc = document.getElementById('toc');
 toc.innerHTML = steps.map((step, i) => `${step.chapter ? `<p class="toc-chapter">${escapeHtml(step.chapter)}</p>` : ''}
-  <button class="toc-link level-${step.level}" type="button" data-index="${i}"><span class="toc-number">${String(i + 1).padStart(2, '0')}</span>${escapeHtml(step.title)}</button>`).join('');
+  <button class="toc-link level-${step.level}" type="button" data-index="${i}"><span class="toc-number">${String(i + 1).padStart(2, '0')}</span><span>${rich(step.title)}</span></button>`).join('');
 const tocLinks = [...toc.querySelectorAll('.toc-link')];
 const setMenu = open => { menu.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); };
 toggle.addEventListener('click', () => setMenu(menu.hidden));
@@ -67,8 +89,35 @@ tocLinks.forEach(link => link.addEventListener('click', () => {
 
 // --- left panel --------------------------------------------------------------------------------------------------
 const graph = buildGraph(document.getElementById('graph'));
+// The stage tables in the forward and backward passages follow the graph's animation.
+const stageTables = [...article.querySelectorAll('.stages')];
+graph.onStage((kind, stage) => {
+  stageTables.forEach(table => {
+    const live = table.dataset.kind === kind;
+    table.classList.toggle('is-playing', live);
+    table.querySelectorAll('tbody tr').forEach((row, i) => {
+      row.classList.toggle('is-live', live && i === stage);
+      row.classList.toggle('is-done', live && i < stage);
+    });
+  });
+});
+
+// Every card opens at its top. While there is more below, an arrow in its corner says so and scrolls it.
 const cards = steps.map(step => {
   const card = renderCard(step, { snippets, digits });
+  const body = card.querySelector('.card-body');
+  const more = document.createElement('button');
+  more.className = 'card-more';
+  more.type = 'button';
+  more.setAttribute('aria-label', 'Scroll this card down');
+  more.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
+  more.addEventListener('click', () => body.scrollBy({ top: body.clientHeight * 0.7, behavior: reduceMotion.matches ? 'auto' : 'smooth' }));
+  card.append(more);
+  card.refreshMore = () => card.classList.toggle('has-more', body.scrollTop + body.clientHeight < body.scrollHeight - 6);
+  body.addEventListener('scroll', card.refreshMore, { passive: true });
+  const watch = new ResizeObserver(card.refreshMore);
+  watch.observe(body);
+  if (body.firstElementChild) watch.observe(body.firstElementChild);
   stack.append(card);
   return card;
 });
@@ -89,11 +138,8 @@ function show(index) {
     card.setAttribute('aria-hidden', String(depth !== 0));
     card.inert = depth !== 0;
   });
-  const body = cards[index].querySelector('.card-body');
-  const focusLine = body.querySelector('.ln.focus');
-  if (focusLine && body.scrollHeight > body.clientHeight) {
-    body.scrollTo({ top: Math.max(0, focusLine.offsetTop - body.clientHeight * 0.3), behavior: reduceMotion.matches ? 'auto' : 'smooth' });
-  }
+  cards[index].querySelector('.card-body').scrollTop = 0;
+  cards[index].refreshMore();
   graph.setState(step.graph);
   blocks.forEach((block, i) => block.classList.toggle('is-current', i === index));
   tocLinks.forEach((link, i) => i === index ? link.setAttribute('aria-current', 'location') : link.removeAttribute('aria-current'));

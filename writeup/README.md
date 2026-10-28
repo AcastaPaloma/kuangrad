@@ -4,10 +4,13 @@ A static, scroll-driven walkthrough of the engine. The article is on the right. 
 gets a yellow box around the part being discussed, and each passage's code slides into a stack below it.
 
 - `content.js`: every passage, its card, and the graph region it highlights
-- `graph.js`: the computation graph and the yellow highlight boxes
+- `graph.js`: the computation graph (nodes, weight matrices, yellow highlight boxes) and the forward/backward animation
 - `cards.js`: code listings and the visual cards (digits, edge, Jacobian, BFS, cost)
-- `app.js`: scroll tracking, the card stack, Contents
+- `format.js`: prose formatting shared by everything: `code`, **bold**, `$tex$` / `$$tex$$` through KaTeX, and the word
+  Neuron set as code
+- `app.js`: scroll tracking, the card stack, the details dialog, Contents
 - `snippets.js`: generated, do not edit
+- `vendor/katex/`: KaTeX 0.16.22 (MIT), woff2 fonts only
 
 Preview locally:
 
