@@ -1,0 +1,9 @@
+# training outputs
+model.json
+model.json.tmp
+train_log.txt
+losses.txt
+loss_vs_time.svg
+
+# Python bytecode
+__pycache__/
