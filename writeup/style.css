@@ -40,6 +40,7 @@ a { color: var(--accent); }
 .visual-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 clamp(20px, 3vw, 40px); font-size: 14px; }
 .visual-head .wordmark { font-family: var(--mono); font-size: 13px; letter-spacing: .02em; }
 .visual-head .wordmark span { color: var(--muted); }
+.visual-head .wordmark code { font: inherit; background: #efeee9; padding: .15em .4em; border-radius: 3px; }
 #step-counter { font: 12px/1 var(--mono); color: var(--muted); }
 .graph-wrap { position: relative; flex-shrink: 0; width: min(100% - 40px, 48vh * 720 / 346); width: min(100% - 40px, 48dvh * 720 / 346); margin: 16px auto 0; aspect-ratio: 720 / 346; container-type: inline-size; }
 .graph-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -271,6 +272,7 @@ body:not(.is-ready) .card { transition: none; }
 .reading-block:first-child { padding-top: 24px; }
 .title-block { margin-bottom: 30px; }
 .chapter-kicker { margin: 0 0 10px; font: 11px Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.title-block h1 code { font: inherit; background: #efeee9; padding: 0 .14em; border-radius: 6px; }
 .title-block h1 { margin: 0; font: 400 clamp(44px, 4.4vw, 64px)/1.02 var(--mono); letter-spacing: -.04em; }
 .subtitle code { font: .8em var(--mono); background: #efeee9; padding: .1em .35em; border-radius: 3px; }
 .subtitle { margin: 14px 0 0; font-size: clamp(20px, 1.7vw, 24px); line-height: 1.35; color: var(--secondary); }

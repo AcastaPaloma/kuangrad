@@ -217,9 +217,9 @@ function bfsCard() {
 // --- cost ----------------------------------------------------------------------------------------------------------
 function costCard() {
   const bars = [
-    ['forward', 1.33, ''],
-    ['backward · list scan', 10.03, 'is-hot'],
-    ['backward · dict lookup', 0.75, '']
+    ['forward', 0.23, ''],
+    ['backward · list scan', 2.46, 'is-hot'],
+    ['backward · dict lookup', 0.18, '']
   ];
   const max = Math.max(...bars.map(b => b[1]));
   const facts = [
@@ -227,17 +227,17 @@ function costCard() {
     ['Neurons visited per backward', '267,295'],
     ['local-gradient entries', '531,064'],
     ['comparisons in local_grad_to', '50,743,610'],
-    ['10,000 iterations at ~11.4 s', '≈ 31 hours']
+    ['10,000 iterations at ~3.1 s', '≈ 8.6 hours']
   ];
   const wrap = document.createElement('div');
   wrap.className = 'cost-card';
   wrap.innerHTML = `
-    <h4>seconds per training step · median of 3</h4>
+    <h4>seconds per training step · median of 7</h4>
     <div class="bars">${bars.map(([label, s, cls]) => `
       <div class="bar-row ${cls}" title="${label}: ${s.toFixed(2)} s"><span class="bar-label">${label}</span><span class="bar-track"><span class="bar" style="--w:${(s / max) * 100}%"></span></span><span class="bar-value">${s.toFixed(2)} s</span></div>`).join('')}
     </div>
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${rich(k)}</dt><dd>${v}</dd></div>`).join('')}</dl>
-    <p class="cost-note">Samples 500–502, the same weights for both lookups. All 265,482 parameter gradients came out identical. Forward times ranged from 0.5 to 1.7 s.</p>`;
+    <p class="cost-note">Samples 500–506, the same weights for both lookups. All 265,482 parameter gradients came out identical. A full step in the training log takes 3.1 s (median of 1,573), which also counts logging and the reset.</p>`;
   return wrap;
 }
 

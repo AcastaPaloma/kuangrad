@@ -15,7 +15,7 @@ export const steps = [
   {
     id: 'kuangrad', chapter: 'Overview', level: 2, title: 'kuangrad',
     body: [
-      { note: '**We didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes about 11 seconds. The point was to see every piece of backpropagation, not to train fast.' },
+      { note: '**I didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes 3 to 4 seconds on my M5 Pro. The point was to see every piece of backpropagation, not to train fast.' },
       'kuangrad is an autograd engine where every number is its own Python object, plus a small neural network trained with it. A weight matrix is a list of lists of objects, and backpropagation is a walk over those objects. The engine is two short files, `neuron.py` and `operations.py`, about 115 lines together.',
       'The network reads a 16 × 16 black-and-white drawing of a digit and outputs ten probabilities, one per digit. The 1,000 training drawings were made by hand in a small tkinter app that lives in the same repo.',
       'The left panel follows along. The graph at the top is what kuangrad builds for one example. Each circle is a Neuron, shaded by its value: blue for positive, purple for negative, white for zero. Between the layers sit the weight matrices $W_1$, $W_2$ and $W_3$, one cell per weight, and every cell is a Neuron too. Only a few rows of each layer are drawn; the real ones hold up to 512. The yellow box marks what the current passage is about, and its code slides in below. Scroll back up and it slides out again.'
@@ -218,11 +218,11 @@ export const steps = [
   {
     id: 'cost', chapter: 'Cost', level: 2, title: 'Where the time goes',
     body: [
-      'One iteration takes about 10 seconds backward and between 0.5 and 1.7 seconds forward (measured on Python 3.13 in a cloud container; your machine will differ). At that rate, the 10,000 iterations in the loop take more than a day.',
+      'On my M5 Pro with Python 3.14, one iteration takes about 3 seconds: about 2.5 s backward, 0.2 s forward, and the rest logging and resetting the parameters. At that rate, the 10,000 iterations in the loop take about 8½ hours.',
       'Almost all of it is `local_grad_to`. Each lookup scans the parent’s list from the front. A pixel has 512 entries and is looked up once by each of the 512 first-layer units: about 131,000 comparisons per pixel. A first-layer activation has 256 entries and is looked up 256 times. In total, one backward pass makes 50.7 million comparisons to find 531,064 numbers. The two highlighted blocks are where they happen.',
-      'Keying the entries by child would make each lookup constant time. A quick test that builds a dict per Neuron on first lookup brings the backward pass from 10.0 s to 0.75 s, and all 265,482 parameter gradients come out identical.'
+      'Keying the entries by child would make each lookup constant time. A quick test that builds a dict per Neuron on first lookup brings the backward pass from 2.5 s to 0.18 s, and all 265,482 parameter gradients come out identical.'
     ],
-    card: { type: 'cost', title: 'one training step', meta: 'Python 3.13' },
+    card: { type: 'cost', title: 'one training step', meta: 'M5 Pro · Python 3.14' },
     graph: { hl: ['layer1', 'layer2'], mode: 'hot', tag: 'list scans' }
   },
   {
@@ -236,7 +236,7 @@ export const steps = [
         '# next',
         '',
         '# 1. key local_grads by child',
-        '#    backward: 10.0 s → 0.75 s, same gradients',
+        '#    backward: 2.5 s → 0.18 s, same gradients',
         '',
         '# 2. hold out a test set',
         '#    samples 0–4 and 996–999 are never drawn',

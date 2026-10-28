@@ -36,7 +36,7 @@ const blocks = steps.map((step, i) => {
   section.id = step.id;
   section.dataset.index = i;
   const heading = i === 0
-    ? `<header class="title-block"><h1>${escapeHtml(step.title)}</h1><p class="subtitle">${rich('An autograd engine, one Neuron at a time')}</p><p class="byline">Kuan Yi Wang · <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">source on GitHub</a></p></header>`
+    ? `<header class="title-block"><h1>${rich(step.title)}</h1><p class="subtitle">${rich('An autograd engine, one Neuron at a time')}</p><p class="byline">Kuan Yi Wang · <a href="https://github.com/AcastaPaloma/kuangrad" target="_blank" rel="noopener">source on GitHub</a></p></header>`
     : `${step.chapter ? `<p class="chapter-kicker">${escapeHtml(step.chapter)}</p>` : ''}<h${step.level}>${rich(step.title)}</h${step.level}>`;
   section.innerHTML = heading + step.body.map(blockHtml).join('');
   article.append(section);

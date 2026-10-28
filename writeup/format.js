@@ -1,6 +1,6 @@
 // Text formatting shared by the article, the cards and the graph: `code`, **bold**, *italic*, $inline$ and $$display$$
-// TeX typeset by the vendored KaTeX (loaded as a classic script before any module runs), and the word Neuron, which
-// always reads as the class name.
+// TeX typeset by the vendored KaTeX (loaded as a classic script before any module runs), and the names Neuron and
+// kuangrad, which are always set as code.
 const MACROS = {
   '\\pd': '\\frac{\\partial #1}{\\partial #2}',
   '\\child': '\\,\\text{child}',
@@ -20,7 +20,7 @@ export const tex = (source, display = false, html = false) => window.katex.rende
 const prose = text => escapeHtml(text)
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   .replace(/\*(.+?)\*/g, '<em>$1</em>')
-  .replace(/\bNeurons?\b/g, '<code>$&</code>');
+  .replace(/\b(?:Neurons?|kuangrad)\b/g, '<code>$&</code>');
 
 // Punctuation right after inline math stays on its line.
 export const rich = source => String(source).split(/(`[^`]+`|\$\$[^$]+\$\$|\$[^$]+\$[.,;:)]*)/).map(part => {
