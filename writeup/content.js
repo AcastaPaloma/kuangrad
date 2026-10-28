@@ -24,7 +24,7 @@ export const steps = [
         ],
         close: "have fun reading, I learned so much - try implementing one yourself, so rewarding !"
       } },
-      { note: '**I didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes 3 to 4 seconds on my M5 Pro. The point was to see every piece of backpropagation, not to train fast.' },
+      { note: '**I didn’t bother with efficiency.** No NumPy, no tensors, no batching: every number is its own Python object, and every derivative is written down by hand. One training step takes 3 to 4 seconds on my M5 Pro.' },
       'kuangrad is an autograd engine where every number is its own Python object, plus a small neural network trained with it. A weight matrix is a list of lists of objects, and backpropagation is a walk over those objects. The engine is two short files, `neuron.py` and `operations.py`, about 115 lines together.',
       'The network reads a 16 × 16 black-and-white drawing of a digit and outputs ten probabilities, one per digit. The 1,000 training drawings were made by hand in a small tkinter app that lives in the same repo.',
       'The left panel follows along. The graph at the top is what kuangrad builds for one example. Each circle is a Neuron, shaded by its value: blue for positive, purple for negative, white for zero. Between the layers sit the weight matrices $W_1$, $W_2$ and $W_3$, one cell per weight, and every cell is a Neuron too. Every symbol is in the notation key in the corner.'
@@ -196,8 +196,7 @@ export const steps = [
     id: 'bfs-order', level: 3, title: 'Why breadth-first is enough here',
     body: [
       'A Neuron should only pass its gradient on once that gradient is final, which means every child has already reported in. The general way to guarantee that is a topological sort. kuangrad uses plain BFS, and it works because of the shape of this network.',
-      'Every path from $L$ to a given Neuron has the same length. The numbers above the graph are those lengths: $p$ is 1 step from $L$, the logits 2, $a_2$ and $W_3$ are 3, and so on down to the pixels and $W_1$ at 7. BFS pops everything at depth $d$ before anything at depth $d + 1$. Every child of a depth-$(d + 1)$ Neuron sits at depth $d$, so when a Neuron is popped, all of its children are already done.',
-      'On a small 6 → 7 → 5 → 4 network built from the same operations, a finite-difference check matches the BFS gradients to within $3 \\times 10^{-10}$.'
+      'Every path from $L$ to a given Neuron has the same length. The numbers above the graph are those lengths: $p$ is 1 step from $L$, the logits 2, $a_2$ and $W_3$ are 3, and so on down to the pixels and $W_1$ at 7. BFS pops everything at depth $d$ before anything at depth $d + 1$. Every child of a depth-$(d + 1)$ Neuron sits at depth $d$, so when a Neuron is popped, all of its children are already done.'
     ],
     card: { type: 'bfs', title: 'BFS order', meta: 'BFS level = path length' },
     graph: { hl: ['all'], mode: 'depth', tag: 'depth = BFS level' }
@@ -224,8 +223,8 @@ export const steps = [
     id: 'cost', chapter: 'Cost', level: 2, title: 'Where the time goes',
     body: [
       'On my M5 Pro with Python 3.14, one iteration takes about 3 seconds: about 2.5 s backward, 0.2 s forward, and the rest logging and resetting the parameters. At that rate, the 10,000 iterations in the loop take about 8½ hours.',
-      'Almost all of it is `local_grad_to`. Each lookup scans the parent’s list from the front. A pixel has 512 entries and is looked up once by each of the 512 first-layer units: about 131,000 comparisons per pixel. A first-layer activation has 256 entries and is looked up 256 times. In total, one backward pass makes 50.7 million comparisons to find 531,064 numbers. The two highlighted blocks are where they happen.',
-      'Keying the entries by child would make each lookup constant time. A quick test that builds a dict per Neuron on first lookup brings the backward pass from 2.5 s to 0.18 s, and all 265,482 parameter gradients come out identical.'
+      'Almost all of it is `local_grad_to` scanning lists from the front: 50.7 million comparisons per backward pass to find 531,064 numbers.',
+      'A dict keyed by child brings the backward pass from 2.5 s to 0.18 s, with identical gradients.'
     ],
     card: { type: 'cost', title: 'one training step', meta: 'M5 Pro · Python 3.14' },
     graph: { hl: ['layer1', 'layer2'], mode: 'hot', tag: 'list scans' }
@@ -233,7 +232,8 @@ export const steps = [
   {
     id: 'next', level: 2, title: 'Next',
     body: [
-      'Next, I’ll break down the optimizer, and backprop across more sophisticated models (maybe in one transformer module???).'
+      'Next, I’ll break down the optimizer, and backprop across more sophisticated models (maybe in one transformer module???).',
+      'Thank you!'
     ],
     card: {
       type: 'text', title: 'next', lines: [

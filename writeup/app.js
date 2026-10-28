@@ -98,8 +98,10 @@ const setMenu = open => { menu.hidden = !open; toggle.setAttribute('aria-expande
 toggle.addEventListener('click', () => setMenu(menu.hidden));
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.hidden) { setMenu(false); toggle.focus(); } });
 document.addEventListener('pointerdown', event => { if (!menu.hidden && !menu.contains(event.target) && !toggle.contains(event.target)) setMenu(false); });
+// A short passage stops lower, so that the next one's top stays below the line measure() picks the current one by.
 const goTo = (index, smooth = true) => {
-  const top = blocks[index].offsetTop - (index === 0 ? 0 : 24);
+  const next = blocks[index + 1];
+  const top = index === 0 ? 0 : Math.min(blocks[index].offsetTop - 24, next ? next.offsetTop - reader.clientHeight * 0.38 - 8 : Infinity);
   reader.scrollTo({ top, behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
 };
 tocLinks.forEach(link => link.addEventListener('click', () => {
@@ -110,6 +112,7 @@ tocLinks.forEach(link => link.addEventListener('click', () => {
 }));
 
 // --- left panel --------------------------------------------------------------------------------------------------
+const visual = document.querySelector('.visual');
 const graph = buildGraph(document.getElementById('graph'));
 // The stage tables in the forward and backward passages follow the graph's animation.
 const stageTables = [...article.querySelectorAll('.stages')];
@@ -132,7 +135,7 @@ const cards = steps.map(step => {
   more.className = 'card-more';
   more.type = 'button';
   more.setAttribute('aria-label', 'Scroll this card down');
-  more.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
+  more.innerHTML = '<span aria-hidden="true">scroll!</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
   more.addEventListener('click', () => body.scrollBy({ top: body.clientHeight * 0.7, behavior: reduceMotion.matches ? 'auto' : 'smooth' }));
   card.append(more);
   card.refreshMore = () => card.classList.toggle('has-more', body.scrollTop + body.clientHeight < body.scrollHeight - 6);
@@ -163,6 +166,7 @@ function show(index) {
   cards[index].querySelector('.card-body').scrollTop = 0;
   cards[index].refreshMore();
   graph.setState(step.graph);
+  visual.classList.toggle('is-animated', step.graph.mode === 'forward' || step.graph.mode === 'backward');
   if (!keyChosen && !matchMedia('(max-width: 760px)').matches) setKey(index > 0, false);
   blocks.forEach((block, i) => block.classList.toggle('is-current', i === index));
   tocLinks.forEach((link, i) => i === index ? link.setAttribute('aria-current', 'location') : link.removeAttribute('aria-current'));
@@ -187,6 +191,24 @@ const schedule = () => {
 };
 reader.addEventListener('scroll', schedule, { passive: true });
 addEventListener('resize', schedule);
+
+// --- arrow keys --------------------------------------------------------------------------------------------------
+// ← and → move to the previous or next passage. With the left panel focused, they first step through the forward and
+// backward animations, one stage at a time.
+let aim = null; // the passage a keypress is scrolling to, so quick presses add up
+let aimTimer = 0;
+const settle = () => { clearTimeout(aimTimer); aimTimer = setTimeout(() => { aim = null; }, 250); };
+reader.addEventListener('scroll', settle, { passive: true });
+document.addEventListener('keydown', event => {
+  const delta = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+  if (!delta || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || dialog.open || !menu.hidden) return;
+  if (event.target.closest?.('input, textarea, select, [contenteditable]')) return;
+  event.preventDefault();
+  if (aim === null && visual.contains(document.activeElement) && graph.step(delta)) return;
+  aim = Math.max(0, Math.min((aim ?? current) + delta, steps.length - 1));
+  settle();
+  goTo(aim);
+});
 
 // Start with every card off to the left, then let the first one jump in.
 const start = steps.findIndex(step => `#${step.id}` === location.hash);

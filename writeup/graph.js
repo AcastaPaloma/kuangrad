@@ -471,18 +471,17 @@ export function buildGraph(root) {
   let frame = 0;
   let playing = null;
   const stop = () => { cancelAnimationFrame(frame); playing = null; };
-  function play(kind) {
-    const total = LINKS.length * STAGE[kind] + HOLD;
+  // With no stage, the whole pass loops. With one (the reader stepping with the arrow keys), only that stage plays,
+  // and its last frame holds.
+  function play(kind, stage) {
+    const n = LINKS.length, total = n * STAGE[kind] + HOLD;
+    const until = stage === undefined ? (reduceMotion.matches ? n * STAGE[kind] : Infinity)
+      : stage < n ? (stage + 1) * STAGE[kind] - 1 : n * STAGE[kind];
+    const from = reduceMotion.matches ? until : stage === undefined ? 0 : stage * STAGE[kind];
     stop();
-    if (reduceMotion.matches) {
-      draw(kind, Infinity);
-      caption.innerHTML = stageCaption(kind, LINKS.length);
-      listener(kind, LINKS.length);
-      return;
-    }
-    playing = { kind, start: performance.now(), stage: -1, key: '' };
+    playing = { kind, start: performance.now() - from, stage: -1, key: '' };
     const tick = now => {
-      let t = Math.max(0, now - playing.start); // a frame's timestamp can precede the start by a hair
+      let t = Math.min(Math.max(0, now - playing.start), until); // a frame's timestamp can precede the start by a hair
       if (t >= total) { playing.start = now; t = 0; }
       const stage = Math.min(LINKS.length, Math.floor(t / STAGE[kind]));
       if (stage !== playing.stage) {
@@ -497,7 +496,7 @@ export function buildGraph(root) {
         caption.innerHTML = arrived >= 0 ? ledger(link, arrived) : stageCaption(kind, stage);
       }
       draw(kind, t);
-      frame = requestAnimationFrame(tick);
+      if (t < until) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
   }
@@ -505,6 +504,14 @@ export function buildGraph(root) {
   draw('base');
   return {
     onStage(callback) { listener = callback; },
+    // Plays the stage before or after the one showing, and holds it. False when there is none, so the caller can move
+    // to the previous or next passage instead.
+    step(delta) {
+      const stage = playing ? playing.stage + delta : -1;
+      if (stage < 0 || stage > LINKS.length) return false;
+      play(playing.kind, stage);
+      return true;
+    },
     setState({ hl = [], mode = '', tag: label = '' }) {
       root.dataset.mode = mode;
       highlights.forEach((box, i) => {
